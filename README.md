@@ -48,7 +48,9 @@ Useful options:
 ## What it does automatically
 
 1. Checks macOS version, architecture and free space
-2. Installs Whisky if missing (direct download; the Homebrew cask was retired in 2026)
+2. Installs Whisky if missing — resolved from the maintained fork's latest GitHub release
+   (`frankea/Whisky`), because `getwhisky.app` no longer serves a download and the Homebrew cask
+   was disabled in 2026
 3. Waits for Whisky to fetch its Wine runtime
 4. Creates or reuses the Whisky bottle
 5. Installs the Windows Steam client into that bottle, silently

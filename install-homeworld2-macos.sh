@@ -37,6 +37,11 @@ SELFTEST=0
 FALLBACK_LAUNCHER=0
 
 WMG_VERSION="winemetalgl-3.7.0"
+# Whisky's upstream repo is archived; the maintained fork publishes DMGs. getwhisky.app
+# is dead (404 on /latest/Whisky.dmg), and the Homebrew cask was disabled in 2026, so
+# resolve the current release from the GitHub API and fall back to a pinned version.
+WHISKY_RELEASES_API="https://api.github.com/repos/frankea/Whisky/releases/latest"
+WHISKY_DMG_FALLBACK="https://github.com/frankea/Whisky/releases/download/app-v3.9.0/Whisky-3.9.0.dmg"
 WMG_URL="https://github.com/metalsharp/WineMetalGL/releases/download/${WMG_VERSION}/install-wine-module.sh"
 STEAM_SETUP_URLS=(
   "https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe"
@@ -79,6 +84,15 @@ WINE_ROOT="$WHISKY_SUPPORT/Libraries/Wine"
 WHISKY_BOTTLES="$HOME/Library/Containers/com.franke.Whisky/Bottles"
 WHISKY_APP="/Applications/Whisky.app"
 WHISKY_CMD="$WHISKY_APP/Contents/Resources/WhiskyCmd"
+
+whisky_dmg_url() {
+  local url
+  url=$(curl -fsSL --max-time 30 "$WHISKY_RELEASES_API" 2>/dev/null \
+        | grep -o '"browser_download_url"[^,]*\.dmg"' | head -1 \
+        | sed 's/.*"\(https[^"]*\)"/\1/' || true)
+  [ -n "${url:-}" ] || url="$WHISKY_DMG_FALLBACK"
+  printf '%s' "$url"
+}
 
 find_wine() {
   local candidates=(
@@ -200,6 +214,8 @@ if [ "${1:-}" = "--selftest" ]; then
   echo "   count of entries:              $(/usr/libexec/PlistBuddy -c 'Print :customDLLOverrides' "$TMPD/Metadata.plist" | grep -c dllName)"
   echo "4. display config (custom):       $(set_display_config "$TMPD/Metadata.plist" 1 custom 2560 1440; /usr/libexec/PlistBuddy -c 'Print :displayConfig' "$TMPD/Metadata.plist" | tr -d '\n ')"
 
+  echo "8. Whisky DMG resolves:           $(whisky_dmg_url)"
+
   printf '<Root>\n  <bWindowed>true</bWindowed>\n</Root>\n' > "$TMPD/LauncherSettings.hws"
   write_launcher_settings "$TMPD/LauncherSettings.hws" 0
   echo "5. launcher windowed->false:      $(grep -o '<bWindowed>[a-z]*</bWindowed>' "$TMPD/LauncherSettings.hws")"
@@ -257,13 +273,15 @@ if [ -d "$WHISKY_APP" ]; then
   ok "Whisky present ($(defaults read "$WHISKY_APP/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo '?'))"
 else
   warn "Whisky is not installed."
-  note "Whisky is a Wine wrapper for macOS. Its Homebrew cask was retired in 2026, so the"
-  note "installer fetches the app directly from the project's own download page."
+  note "Whisky is a Wine wrapper for macOS. Upstream stopped maintaining it and its"
+  note "Homebrew cask was disabled in 2026; a fork keeps releasing builds."
   if confirm "Download and install Whisky now?" y; then
     TMPD=$(mktemp -d); trap 'rm -rf "$TMPD"' EXIT
     DMG="$TMPD/Whisky.dmg"
-    curl -fL --progress-bar "https://getwhisky.app/latest/Whisky.dmg" -o "$DMG" \
-      || die "Download failed. Install Whisky manually from https://getwhisky.app and re-run."
+    WHISKY_DMG=$(whisky_dmg_url)
+    note "Source: $WHISKY_DMG"
+    curl -fL --progress-bar "$WHISKY_DMG" -o "$DMG" \
+      || die "Download failed. Get Whisky manually from https://github.com/frankea/Whisky/releases and re-run."
     run hdiutil attach "$DMG" -nobrowse -quiet -mountpoint "$TMPD/mnt"
     run cp -R "$TMPD/mnt/Whisky.app" /Applications/
     run hdiutil detach "$TMPD/mnt" -quiet
