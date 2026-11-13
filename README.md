@@ -18,6 +18,18 @@ OpenGL 1.0–4.6 (compatibility profile, plus GLES 2–3.2) that compiles GLSL t
 Language and runs it directly on the GPU. **No Vulkan, no MoltenVK, no Mesa, no software
 rendering.** The game gets the context it asks for, at full GPU speed.
 
+## What has been verified
+
+- Full run on an M5 Pro (macOS 26), Whisky 3.7.0, against an existing install: the script completes
+  and the game log reports `GL Renderer: <GPU> (WineMetalGL)`.
+- The Whisky DMG is resolved from the fork's release API and installs (v3.9.0 checked, mounts and
+  contains `Whisky.app`).
+- The Steam installer URLs and the WineMetalGL release asset respond.
+
+**Not verified end to end:** a machine with no Whisky, no Steam and no game installed — every run
+here started from an existing install. Steps 1–5 are straightforward but unproven as a sequence.
+If you are the first to run it clean, please open an issue with what happened.
+
 ## Requirements
 
 - Apple Silicon Mac (M1 or newer)
